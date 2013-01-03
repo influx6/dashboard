@@ -23,6 +23,7 @@ module.exports = (function(utility,url,qs,debug,domain){
 					fn(false);
 				},function(err){
 					if(err) failure();
+					console.log("find completed!");
 				},this,function(e,i,o){
 					var match = item.match(e.mount);
 					if(utility.isObject(e) && match){ success(e,match); return true;}
@@ -60,6 +61,7 @@ module.exports = (function(utility,url,qs,debug,domain){
 				fn: function(req,res){
 					res.writeHead(404,{ 'content-type': "text/plain",'x-powered-by':"router@0.1"});
 					res.end("Page Not Found!");
+					self.domain.dispose();
 					Router.debug.custom(req,'page not found from');
 				}
 			});
@@ -67,30 +69,32 @@ module.exports = (function(utility,url,qs,debug,domain){
 
 			server.on('request',function(req,res){
 				var data = [''];
+				self.pipe.req = req;
+				self.pipe.res = res;
 				self.domain.add(req);
 				self.domain.add(res); 
 
-				req.on('error',function(err){
-					debug.log("request error 505!",err);
-					try{
-						res.writeHead(505);
-						res.end("Request Error! 505!");
-						res.on('end',function(){	self.domain.dispose(); })
-					}catch(e){
-						debug.log("tryCatching 505 Error!",e,req.url);
-						self.domain.dispose()
-					}
-				});
+				// req.on('error',function(err){
+				// 	debug.log("request error 505!",err);
+				// 	try{
+				// 		res.writeHead(505);
+				// 		res.end("Request Error! 505!");
+				// 		res.on('end',function(){	self.domain.dispose(); })
+				// 	}catch(e){
+				// 		debug.log("tryCatching 505 Error",e,req.url);
+				// 		self.domain.dispose()
+				// 	}
+				// });
 
-				req.on('data',function(chunk){
-					data.push(chunk);
-				});
+				// req.on('data',function(chunk){
+				// 	data.push(chunk);
+				// });
 
-				req.on('end',function(){
-					process.nextTick(function(){ self.process(req,res,data); });
-				})
+				// req.on('end',function(){
+				// 	process.nextTick(function(){ self.process(req,res,data); });
+				// })
 
-				// process.nextTick(function(){ self.process(req,res,data); });
+				process.nextTick(function(){ self.process(req,res,data); });
 			});
 		};
 		Router.debug = {
@@ -238,11 +242,11 @@ module.exports = (function(utility,url,qs,debug,domain){
 			return route;
 		};
 
-		Router.fn.params = function(templ,keys){
+		Router.fn.params = function(templ,keys,obj){
 			var params = {};
 			utility.eachAsync(templ,function(e,i,o){
 			   var k = e.split(':'), c = keys[i];
-			   if(k[1]) params[k[1]] = c;
+			   if(k[1] && (k[1] in obj)) params[k[1]] = c;
 			},null,this);
 			return params;
 		};
@@ -276,7 +280,7 @@ module.exports = (function(utility,url,qs,debug,domain){
 
 			root.find(requested,function(e,o){
 				var param = {};
-				param.url = self.params(e.split,reqa);
+				param.url = self.params(e.split,reqa,e.params);
 				param.body = qs.parse(body.join(''));
 				res.params = param;
 				Router.debug.custom(req,"made to");

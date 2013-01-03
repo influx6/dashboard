@@ -4,6 +4,7 @@ module.exports = (function(){
 		path = require('path'),
 		url = require('url'),
 		qs = require('querystring'),
+		domain = require('domain'),
 		debug = null,
 
 		coredir = path.resolve(config,'../../core'),
@@ -13,14 +14,12 @@ module.exports = (function(){
 		appdir = path.resolve(config,"../apps"),
 		moduledir = path.resolve(coredir,"modules"),
 
-		toolstack = require(path.resolve(toolstackdir,'./builds/toolstack.js')),
+		toolstack = require(path.resolve(toolstackdir,'./builds/toolstack.js')).ToolStack,
 		router = require(path.resolve(libdir,'./router.js')),
-		core = require(path.resolve(coredir,'./src/core.js'));
+		core = require(path.resolve(coredir,'./src/core.js')).Core(toolstack);
 
-		toolstack = toolstack.ExtInit(toolstack);
-		core = core(toolstack,path);
-		debug = toolstack.Console.init('consile');
-		router = router(toolstack.ToolChain,url,qs,debug);
+		debug = toolstack.Console.init('console');
+		router = router(toolstack.Utility,url,qs,debug,domain);
 
 
 		var configuration = {
@@ -53,14 +52,17 @@ module.exports = (function(){
 			lib:function(file){
 				return require(path.resolve(libdir,file));
 			}, 
-			app: function(file){
+			apps: function(file){
 				return require(path.resolve(appdir,file));
+			},
+			config: function(file){
+				return this.loadPath('config',file);
 			}
 		};
 
 	//loadup extra modules for immediate access;
-		configuration.modules('server')(core,toolstack.ToolChain);
-		configuration.modules('filewatcher')(core,toolstack.ToolChain);
+	configuration.modules('server/module.server.js')(core,toolstack.Utility,debug,domain);
+	configuration.modules('server/module.filewatcher.js')(core,toolstack.Utility,debug,domain);
 
 		// configuration.Modules = core.Modules;
 
