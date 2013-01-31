@@ -1,11 +1,27 @@
 module.exports = (function(sandbox,config){
 
-	//register need apps
-	var admin = config.apps('admin/app.js')(config.core,config.router,sandbox.facade);
+	//regsiter sources to fsl for use in reloading the sources when needed
+	var admin = config.getPath('app','admin/app.js');
+	// sandbox.fsl.add('admin:app.js',config.getPath('app','admin/app.js'));
 
-	sandbox.registerApp(admin,{
-		name: "admin",channel: "admin",
-		main: "app.js",watch: "app.js",
-	});
-		
+	//register need apps
+	var modules = sandbox.modules();
+
+	sandbox.registerApp(modules.FileWatcher(),{
+		name: 'watcher', main: null,
+		setup: function(app){}
+	},{});
+
+	sandbox.registerApp(modules.HttpServer(function(){
+		return sandbox.fsl.require("admin",true)(config.router,config.toolstack);
+	}),{
+		name: "admin", main: "admin/app.js",
+		setup: function(app){
+			sandbox.fsl.add('admin',admin);
+			sandbox.notify(app.name,'watcher','watch',app.name,admin,function(){
+				sandbox.notify('watcher',app.name,'reboot');
+			});
+		}
+	},{});
+
 });

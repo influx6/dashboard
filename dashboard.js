@@ -5,7 +5,11 @@ var config = require('./config/config'),
 
 var dashboard = core.Sandbox(config.getPath('root','modules'),config.getPath('root','apps'));
 
-//loadup the app.config and set it on dashboard to load apps
-appconfig(dashboard,config);
+//expose specific instance abilties through the facade
+dashboard.facade.fsl = config.fsl.create();
 
-debug.log(dashboard);
+//loadup the app.config and set it on dashboard to load apps
+appconfig(dashboard.facade,config);
+
+console.log(dashboard.apps['app:watcher']);
+dashboard.apps['app:watcher'].app.bootup();
